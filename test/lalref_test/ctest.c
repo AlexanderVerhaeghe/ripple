@@ -111,7 +111,7 @@ void XLAL_ERROR(int EINVAL, char *message){
 }
 
 void XLAL_CHECK(int statement, int fault, char *message){
-    if (statement =0){
+    if (statement == 0){
       printf("error \n");
       printstr(message);
     }
@@ -949,6 +949,8 @@ typedef enum tagIMRPhenomP_version_type {
    const REAL8 sBetah3 = sBetah2*sBetah;
    const REAL8 sBetah4 = sBetah3*sBetah;
   
+
+
    /* Compute Wigner d coefficients
      The expressions below agree with refX [Goldstein?] and Mathematica
      d2  = Table[WignerD[{2, mp, 2}, 0, -\[Beta], 0], {mp, -2, 2}]
@@ -997,17 +999,17 @@ int main(){
     REAL8 tmp1, tmp2;
     REAL8 chi1_l, chi2_l, chip, thetaJN, alpha0, phi_aligned, zeta_polariz;
     REAL8 m1_SI, m2_SI, f_ref, phiRef, incl, s1x, s1y, s1z, s2x, s2y, s2z;
-    m1_SI = 4e30;
-    m2_SI = 6e30;
-    f_ref = 30;
+    m1_SI = 10 * LAL_MSUN_SI;
+    m2_SI = 12 * LAL_MSUN_SI;
+    f_ref = 32;
     phiRef = 0.0;
-    incl = 0.0;
-    s1x = 0.5;
-    s1y = -0.2;
-    s1z = 0.3;
-    s2x = 0.0;
-    s2y = 0.6;
-    s2z = 0.3;
+    incl = LAL_PI / 2.0;
+    s2x = -0.4;
+    s2y = -0.3;
+    s2z = -0.4;
+    s1x = 0.3;
+    s1y = -0.25;
+    s1z = 0.4;
 
     //IMRPhenomP_version_type IMRPhenomPv2_V;
 
@@ -1025,20 +1027,39 @@ int main(){
     const REAL8 eta = m1 * m2 / (M*M);    /* Symmetric mass-ratio */
     
     ComputeNNLOanglecoeffs(&angcoeffs,q,chil,chip);
-    //printf("%.10f, %.10f, %.10f, %.10f, %.10f, %.10f %.10f", chi1_l, chi2_l, chip, thetaJN, alpha0, phi_aligned, zeta_polariz);
-    //printf("\n");  
+    const REAL8 piM = LAL_PI * m_sec;
 
-    //printf("%.10f, %.10f, %.10f, %.10f, %.10f \n", 
-    //angcoeffs.alphacoeff1, angcoeffs.alphacoeff2, angcoeffs.alphacoeff3, 
-    //angcoeffs.alphacoeff4, angcoeffs.alphacoeff5);
+   /* Compute the offsets due to the choice of integration constant in alpha and epsilon PN formula */
+   const REAL8 omega_ref = piM * f_ref;
+   const REAL8 logomega_ref = log(omega_ref);
+   const REAL8 omega_ref_cbrt = cbrt(piM * f_ref); // == v0
+   const REAL8 omega_ref_cbrt2 = omega_ref_cbrt*omega_ref_cbrt;
+   const REAL8 alphaNNLOoffset = (angcoeffs.alphacoeff1/omega_ref
+                               + angcoeffs.alphacoeff2/omega_ref_cbrt2
+                               + angcoeffs.alphacoeff3/omega_ref_cbrt
+                               + angcoeffs.alphacoeff4*logomega_ref
+                               + angcoeffs.alphacoeff5*omega_ref_cbrt);
+  
+   const REAL8 epsilonNNLOoffset = (angcoeffs.epsiloncoeff1/omega_ref
+                                 + angcoeffs.epsiloncoeff2/omega_ref_cbrt2
+                                 + angcoeffs.epsiloncoeff3/omega_ref_cbrt
+                                 + angcoeffs.epsiloncoeff4*logomega_ref
+                                 + angcoeffs.epsiloncoeff5*omega_ref_cbrt);
+    printf("params: ");
+    printf("%.14f, %.14f, %.14f, %.14f, %.14f, %.14f %.14f", chi1_l, chi2_l, chip, thetaJN, alpha0, phi_aligned, zeta_polariz);
+    printf("\n");  
+
+    printf("%.10f, %.10f, %.10f, %.10f, %.10f \n", 
+    angcoeffs.alphacoeff1, angcoeffs.alphacoeff2, angcoeffs.alphacoeff3, 
+    angcoeffs.alphacoeff4, angcoeffs.alphacoeff5);
     
-    //printf("%.10f, %.10f, %.10f, %.10f, %.10f \n", 
-    //angcoeffs.epsiloncoeff1, angcoeffs.epsiloncoeff2, angcoeffs.epsiloncoeff3, 
-    //angcoeffs.epsiloncoeff4, angcoeffs.epsiloncoeff5);
+    printf("%.10f, %.10f, %.10f, %.10f, %.10f \n", 
+    angcoeffs.epsiloncoeff1, angcoeffs.epsiloncoeff2, angcoeffs.epsiloncoeff3, 
+    angcoeffs.epsiloncoeff4, angcoeffs.epsiloncoeff5);
 
-    //REAL8 cos_beta_half, sin_beta_half;
-    //WignerdCoefficients(&cos_beta_half, &sin_beta_half, 0.34, 0.52, 0.44, 0.135);
-    //printf("%.10f, %.10f \n",cos_beta_half, sin_beta_half);
+    REAL8 cos_beta_half, sin_beta_half;
+    WignerdCoefficients(&cos_beta_half, &sin_beta_half, 0.34, 0.52, 0.44, 0.135);
+    printf("%.10f, %.10f \n",cos_beta_half, sin_beta_half);
     COMPLEX16 hp, hc;
     SpinWeightedSphericalHarmonic_l2 Y2m;
     const REAL8 ytheta  = thetaJN;
@@ -1054,7 +1075,7 @@ int main(){
    printf("%.10f+%.10fi ", creal(Y2m.Y20),cimag(Y2m.Y20));
    printf("%.10f+%.10fi ", creal(Y2m.Y21),cimag(Y2m.Y21));
    printf("%.10f+%.10fi \n", creal(Y2m.Y22),cimag(Y2m.Y22));
-    PhenomPCoreTwistUp(100, 1, eta, chi1_l, chi2_l, chip, M, &angcoeffs, &Y2m, 0.01-alpha0, 0.01, &hp, &hc,IMRPhenomPv2_V);
+   PhenomPCoreTwistUp(70, 0.87-2.433*I, eta, chi1_l, chi2_l, chip, M, &angcoeffs, &Y2m, alphaNNLOoffset-alpha0, epsilonNNLOoffset, &hp, &hc,IMRPhenomPv2_V);
     
     printf("final result: %.10f + i%.10f, %.10f + i%.10f \n", 
             creal(hp), cimag(hp),creal(hc), cimag(hc));
