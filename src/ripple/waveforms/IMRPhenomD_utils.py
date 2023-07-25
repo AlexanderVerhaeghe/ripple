@@ -119,7 +119,7 @@ def get_transition_frequencies(
 def get_coeffs(theta: Array) -> Array:
     # Retrives the coefficients needed to produce the waveform
 
-    m1, m2, chi1, chi2 = theta
+    m1, m2, chi1, chi2 = theta[:4]
     m1_s = m1 * gt
     m2_s = m2 * gt
     M_s = m1_s + m2_s
